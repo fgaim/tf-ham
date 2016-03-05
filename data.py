@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
 
 def create_pair(bit_length=5):
@@ -19,11 +23,11 @@ def create_example(n=5, bit_length=5):
   return x, y
 
 if __name__ == '__main__':
-  print 'First two bits are the key which is used for sorting'
-  print 'Last two bits are the value that is tied to the key'
-  print 'Sorting should be stable and not depend on the value'
+  print('First two bits are the key which is used for sorting')
+  print('Last two bits are the value that is tied to the key')
+  print('Sorting should be stable and not depend on the value')
   for i in xrange(5):
-    print '=-='
+    print('=-=')
     x, y = create_example(bit_length=2)
-    print x
-    print '=>', y
+    print(x)
+    print('=>', y)
