@@ -58,7 +58,7 @@ class Write(object):
     return update * candidate + (1 - update) * h
 
 
-class HAMTree(object):
+class HAMOperations(object):
   def __init__(self, embed_size, tree_size, controller_size):
     ###
     # From the paper,
@@ -70,6 +70,16 @@ class HAMTree(object):
     self.join = Join(tree_size)
     self.search = Search(tree_size, controller_size)
     self.write = Write(tree_size, controller_size)
+
+
+class HAMTree(object):
+  def __init__(self, ham_ops):
+    self.ops = ham_ops
+    ##
+    self.transform = self.ops.transform
+    self.join = self.ops.join
+    self.search = self.ops.search
+    self.write = self.ops.write
     ##
     self.root = None
     self.leaves = None
@@ -77,7 +87,6 @@ class HAMTree(object):
 
   def __repr__(self):
     return 'HAMTree'
-    #return 'HAMTree(embed_size={}, tree_size={}, controller_size={})'.format(self.embed_size, self.tree_size, self.controller_size)
 
   def construct(self, total_leaves):
     # Ensure that the total number of leaves is a power of two
@@ -144,7 +153,8 @@ class HAMNode(object):
     return value
 
 if __name__ == '__main__':
-  tree = HAMTree(1, 2, 3)
+  ham_ops = HAMOperations(1, 2, 3)
+  tree = HAMTree(ham_ops=ham_ops)
   tree.construct(2)
   print(tree.nodes)
   l, r = tree.leaves
