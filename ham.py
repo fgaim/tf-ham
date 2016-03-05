@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import tensorflow as tf
 
 
@@ -17,7 +18,7 @@ class Transformer(object):
     return tf.nn.relu(tf.matmul(tf.concat(1, [left, right]), self.W))
 
 
-class Join(Transformer):
+class Join(object):
   '''
   Input = [d, d]
   Output = [d]
@@ -29,7 +30,7 @@ class Join(Transformer):
     return tf.nn.relu(tf.matmul(tf.concat(1, [left, right]), self.W))
 
 
-class Search(Transformer):
+class Search(object):
   '''
   Input = [d, l]
   Output = [1]
@@ -41,7 +42,7 @@ class Search(Transformer):
     return tf.nn.sigmoid(tf.matmul(tf.concat(1, [h, control]), self.W))
 
 
-class Write(Transformer):
+class Write(object):
   '''
   Input = [d, l]
   Output = [d]
@@ -72,25 +73,38 @@ class HAMTree(object):
     ##
     self.root = None
     self.leaves = None
+    self.nodes = None
 
-  def construct(self, depth):
-    # Create all the leaf nodes, then combine them
+  def __repr__(self):
+    return 'HAMTree'
+    #return 'HAMTree(embed_size={}, tree_size={}, controller_size={})'.format(self.embed_size, self.tree_size, self.controller_size)
+
+  def construct(self, total_leaves):
+    # Ensure that the total number of leaves is a power of two
+    depth = np.log(total_leaves) / np.log(2)
+    assert depth.is_integer(), 'The total leaves must be a power of two'
+    ###
+    # Create all the leaf nodes and then combine them until only one exists
     # A B C D
     # C D [A B]
     # [A B] [C D]
     # [[A B] [C D]]
     ###
-    total_leaves = 2 ** depth
-    stack = [HAMNode(tree=self, left=None, right=None) for leaf in xrange(total_leaves)]
-    self.leaves = stack
-    while len(stack) > 1:
-      l, r = stack[:2]
-      stack = stack[2:]
-      stack.append(HAMNode(tree=self, left=l, right=r))
-    self.root = stack[0]
+    queue = [HAMNode(tree=self, left=None, right=None) for leaf in xrange(total_leaves)]
+    self.leaves = [leaf for leaf in queue]
+    self.nodes = [leaf for leaf in queue]
+    while len(queue) > 1:
+      l, r = queue.pop(0), queue.pop(0)
+      node = HAMNode(tree=self, left=l, right=r)
+      queue.append(node)
+      self.nodes.append(node)
+    self.root = queue[0]
+
+  def join(self):
+    self.root.join()
 
   def get_output(self, control):
-    return self.root.get_output(control)
+    return self.root.retrieve_and_update(control)
 
 
 class HAMNode(object):
@@ -98,19 +112,27 @@ class HAMNode(object):
     self.tree = tree
     self.left = left
     self.right = right
-    self.h = tree.join(left, right)
+
+  def __repr__(self):
+    return 'HAMNode(tree={}, left={}, right={})'.format(self.tree, bool(self.left), bool(self.right))
 
   def embed(self, value):
     self.h = self.tree.transform(value)
 
-  def get_output(self, control):
+  def join(self):
+    if self.left and self.right:
+      self.left.join()
+      self.right.join()
+      self.h = tree.join(self.left, self.right)
+
+  def retrieve_and_update(self, control):
     value = None
     ###
     # Retrieve the value - left and right weighted by the value of search
     if self.left and self.right:
       decision = self.tree.search(self.h, control)
-      value = decision * self.right.get_output(control)
-      value += (1 - decision) * self.left.get_output(control)
+      value = decision * self.right.retrieve_and_update(control)
+      value += (1 - decision) * self.left.retrieve_and_update(control)
     else:
       value = self.h
     ###
@@ -120,3 +142,12 @@ class HAMNode(object):
     else:
       self.h = self.tree.write(self.h, control)
     return value
+
+if __name__ == '__main__':
+  tree = HAMTree(1, 2, 3)
+  tree.construct(2)
+  print(tree.nodes)
+  l, r = tree.leaves
+  assert len(tree.leaves) == 2, 'Depth 2 tree should have 2 leaves'
+  assert len(tree.nodes) == 3, 'Depth 2 tree should have 3 nodes (two leaves, one root)'
+  assert tree.root.left == l and tree.root.right == r, 'Depth 2 tree is broken'
