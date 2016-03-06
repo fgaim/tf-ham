@@ -20,6 +20,7 @@ def create_example(n=5, bit_length=5):
   pairs = create_pairs(n=n, bit_length=bit_length)
   correct_order = sorted(pairs, key=lambda p: p[0])
   x, y = concat_pairs(pairs), concat_pairs(correct_order)
+  x, y = np.array(x, dtype=np.float32), np.array(y, dtype=np.float32)
   return x, y
 
 if __name__ == '__main__':

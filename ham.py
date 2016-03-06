@@ -14,8 +14,8 @@ class Transformer(object):
   def __init__(self, input_size, output_size):
     self.W = tf.Variable(tf.truncated_normal([input_size, output_size]))
 
-  def __call__(self, left, right):
-    return tf.nn.relu(tf.matmul(tf.concat(1, [left, right]), self.W))
+  def __call__(self, val):
+    return tf.nn.relu(tf.matmul(val, self.W))
 
 
 class Join(object):
@@ -109,7 +109,7 @@ class HAMTree(object):
       self.nodes.append(node)
     self.root = queue[0]
 
-  def join(self):
+  def refresh(self):
     self.root.join()
 
   def get_output(self, control):
@@ -121,6 +121,7 @@ class HAMNode(object):
     self.tree = tree
     self.left = left
     self.right = right
+    self.h = None
 
   def __repr__(self):
     return 'HAMNode(tree={}, left={}, right={})'.format(self.tree, bool(self.left), bool(self.right))
@@ -132,7 +133,7 @@ class HAMNode(object):
     if self.left and self.right:
       self.left.join()
       self.right.join()
-      self.h = tree.join(self.left, self.right)
+      self.h = self.tree.join(self.left.h, self.right.h)
 
   def retrieve_and_update(self, control):
     value = None
