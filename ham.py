@@ -122,11 +122,13 @@ class HAMNode(object):
     self.left = left
     self.right = right
     self.h = None
+    self.value = None
 
   def __repr__(self):
     return 'HAMNode(tree={}, left={}, right={})'.format(self.tree, bool(self.left), bool(self.right))
 
   def embed(self, value):
+    self.value = value
     self.h = self.tree.transform(value)
 
   def join(self):
@@ -135,22 +137,22 @@ class HAMNode(object):
       self.right.join()
       self.h = self.tree.join(self.left.h, self.right.h)
 
-  def retrieve_and_update(self, control):
+  def retrieve_and_update(self, control, attention=1.0):
     value = None
     ###
     # Retrieve the value - left and right weighted by the value of search
     if self.left and self.right:
-      decision = self.tree.search(self.h, control)
-      value = decision * self.right.retrieve_and_update(control)
-      value += (1 - decision) * self.left.retrieve_and_update(control)
+      move_right = self.tree.search(self.h, control)
+      value = self.right.retrieve_and_update(control, attention=attention * move_right)
+      value += self.left.retrieve_and_update(control, attention=attention * (1 - move_right))
     else:
-      value = self.h
+      value = attention * self.value
     ###
     # Update the values of the tree
     if self.left and self.right:
       self.h = self.tree.join(self.left.h, self.right.h)
     else:
-      self.h = self.tree.write(self.h, control)
+      self.h = attention * self.tree.write(self.h, control) + (1 - attention) * self.h
     return value
 
 if __name__ == '__main__':
