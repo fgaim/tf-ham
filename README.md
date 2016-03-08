@@ -21,6 +21,13 @@ The plan is to extend the code to perform the sorting task as described in Secti
 As opposed to the HAM architecture implemented in the paper, this is the fully differentiable version referred to as DHAM (see _Appendix A - Using soft attention_).
 According to the paper, the DHAM architecture is slightly easier to train than the REINFORCE versio but does not generalize as well to larger memory sizes.
 
-By default, `python ham_sort.py` will train the HAM architecture to select the smallest input from $n=8$ elements.
+By default, `python ham_sort.py` will train the HAM architecture to select the smallest input from $n=8$ elements, reaching 99.7% accuracy at the end of 100 epochs.
 The weights are saved in `ham.weights` at the end of each epoch and will be re-used if training is restarted.
 This allows for naive curriculum schedule training by training at smaller $n$, waiting for loss or accuracy to stabilize, and then increasing $n$ and restarting training.
+
+If the $n=8$ model is tested on $n=16$ it reaches 83.8% accuracy and when tested on $n=32$ it reaches 60.3% accuracy.
+This accuracy may be improved as the model gets closer to the specifics of the paper or may represent DHAM's inability to generalize to larger input sizes.
+
+# License
+
+MIT License, as per `LICENSE`
