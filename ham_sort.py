@@ -10,15 +10,17 @@ import tensorflow as tf
 from data import create_example
 from ham import HAMOperations, HAMNode, HAMTree
 
-class Config(object):
-  max_epochs = 100
-  batch_size = 50
-  n = 8
-  embed_size = 10
-  tree_size = 20
-  controller_size = 20
+tf.app.flags.DEFINE_float('lr', 0.001, 'Learning rate for Adam optimizer')
+tf.app.flags.DEFINE_integer('max_epochs', 100, 'Maximum epochs to train for.')
+tf.app.flags.DEFINE_integer('batch_size', 32, 'Batch size.')
+tf.app.flags.DEFINE_integer('n', 8, 'Size of the input to sort.')
+tf.app.flags.DEFINE_integer('embed_size', 10, 'Embedding size for input to sort - half key, half value')
+tf.app.flags.DEFINE_integer('tree_size', 20, 'Tree size')
+tf.app.flags.DEFINE_integer('controller_size', 20, 'Controller size')
+tf.app.flags.DEFINE_string('weights_path', './ham.weights', 'Where to load and save the weights for the model')
+tf.app.flags.DEFINE_boolean('test', False, 'Whether to only run testing')
 
-config = Config()
+config = tf.app.flags.FLAGS
 
 inputs = tf.placeholder(tf.float32, shape=[config.batch_size, config.n, config.embed_size], name='Input')
 control = tf.placeholder(tf.float32, shape=[config.batch_size, config.controller_size], name='Control')
@@ -36,18 +38,17 @@ tree.refresh()
 calculate_predicted = tree.get_output(control)
 calculate_loss = tf.reduce_sum(tf.pow(calculate_predicted - target, 2)) / config.batch_size
 
-optimizer = tf.train.AdamOptimizer(0.001)
+optimizer = tf.train.AdamOptimizer(config.lr)
 train_step = optimizer.minimize(calculate_loss)
 
 init = tf.initialize_all_variables()
 saver = tf.train.Saver()
-saved_weights_fn = './ham.weights'
 
 with tf.Session() as session:
   session.run(init)
 
-  if os.path.exists(saved_weights_fn):
-    saver.restore(session, saved_weights_fn)
+  if os.path.exists(config.weights_path):
+    saver.restore(session, config.weights_path)
 
   # Paper uses 100 epochs with 1000 batches of batch size 50
   for epoch in xrange(config.max_epochs):
@@ -62,7 +63,7 @@ with tf.Session() as session:
         Y.append(y[0])
       control_signal = np.zeros([config.batch_size, config.controller_size], dtype=np.float32)
       feed = {inputs: X, target: Y, control: control_signal}
-      _, loss, predicted = session.run([train_step, calculate_loss, calculate_predicted], feed_dict=feed)
+      _, loss, predicted = session.run([tf.no_op() if config.test else train_step, calculate_loss, calculate_predicted], feed_dict=feed)
       ###
       for y, y_pred in zip(Y, predicted):
         y = y.astype(int)
@@ -73,4 +74,5 @@ with tf.Session() as session:
     print('Loss = {}'.format(total_loss / total_batches))
     print('Accuracy = {}'.format(total_accuracy / (config.batch_size * total_batches)))
     print('=-=')
-    saver.save(session, saved_weights_fn)
+    if not config.test:
+      saver.save(session, config.weights_path)
