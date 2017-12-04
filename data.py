@@ -10,7 +10,7 @@ def create_pair(bit_length=5):
   return list(key), list(val)
 
 def create_pairs(bit_length=5, n=5):
-  pairs = [create_pair(bit_length=bit_length) for x in xrange(n)]
+  pairs = [create_pair(bit_length=bit_length) for x in range(n)]
   return pairs
 
 def concat_pairs(pairs):
@@ -27,7 +27,7 @@ if __name__ == '__main__':
   print('First two bits are the key which is used for sorting')
   print('Last two bits are the value that is tied to the key')
   print('Sorting should be stable and not depend on the value')
-  for i in xrange(5):
+  for i in range(5):
     print('=-=')
     x, y = create_example(bit_length=2)
     print(x)

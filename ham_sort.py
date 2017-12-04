@@ -31,12 +31,12 @@ ham_ops = HAMOperations(config.embed_size, config.tree_size, config.controller_s
 tree = HAMTree(ham_ops=ham_ops)
 tree.construct(config.n)
 
-values = [tf.squeeze(x, [1]) for x in tf.split(1, config.n, inputs)]
+values = [tf.squeeze(x, [1]) for x in tf.split(axis=1, num_or_size_splits=config.n, value=inputs)]
 for i, val in enumerate(values):
   tree.leaves[i].embed(val)
 tree.refresh()
 
-calculate_predicted = tf.concat(1, [tree.get_output(control) for _ in xrange(config.n)])
+calculate_predicted = tf.concat(axis=1, values=[tree.get_output(control) for _ in range(config.n)])
 targets = tf.reshape(target, [config.batch_size, config.n * config.embed_size])
 penalty = lambda x, y: tf.pow(x - y, 2)
 #penalty = lambda x, y: tf.abs(x - y)
@@ -45,14 +45,14 @@ calculate_loss = tf.reduce_sum(penalty(calculate_predicted, targets)) / config.n
 optimizer = tf.train.AdamOptimizer(config.lr)
 train_step = optimizer.minimize(calculate_loss)
 
-init = tf.initialize_all_variables()
+init = tf.global_variables_initializer()
 saver = tf.train.Saver()
 
 with tf.Session() as session:
   for var in tf.trainable_variables():
-    tf.histogram_summary(var.op.name, var)
-  summary_op = tf.merge_all_summaries()
-  summary_writer = tf.train.SummaryWriter('/tmp/ham-sort/', session.graph_def, flush_secs=5)
+    tf.summary.histogram(var.op.name, var)
+  summary_op = tf.summary.merge_all()
+  summary_writer = tf.summary.FileWriter('/tmp/ham-sort/', session.graph, flush_secs=5)
 
   session.run(init)
 
@@ -60,21 +60,21 @@ with tf.Session() as session:
     saver.restore(session, config.weights_path)
 
   # Paper uses 100 epochs with 1000 batches of batch size 50
-  for epoch in xrange(config.max_epochs):
+  for epoch in range(config.max_epochs):
     total_batches = config.batches_per_epoch
     total_accuracy = 0.0
     total_loss = 0.0
-    for i in xrange(total_batches):
+    for i in range(total_batches):
       X, Y = [], []
-      for b in xrange(config.batch_size):
-        x, y = create_example(n=config.n, bit_length=config.embed_size / 2)
+      for b in range(config.batch_size):
+        x, y = create_example(n=config.n, bit_length=int(config.embed_size / 2))
         X.append(x)
         Y.append(y)
       control_signal = np.zeros([config.batch_size, config.controller_size], dtype=np.float32)
       feed = {inputs: X, target: Y, control: control_signal}
       _, loss, predicted = session.run([tf.no_op() if config.test else train_step, calculate_loss, calculate_predicted], feed_dict=feed)
       ###
-      for b in xrange(config.batch_size):
+      for b in range(config.batch_size):
         y = Y[b].reshape(config.n * config.embed_size)
         y_pred = np.rint(predicted[b]).astype(int)
         total_accuracy += (y == y_pred).all()

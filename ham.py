@@ -27,7 +27,7 @@ class Join(object):
     self.W = tf.Variable(tf.truncated_normal([2 * d, d]))
 
   def __call__(self, left, right):
-    return tf.nn.relu(tf.matmul(tf.concat(1, [left, right]), self.W))
+    return tf.nn.relu(tf.matmul(tf.concat(axis=1, values=[left, right]), self.W))
 
 
 class Search(object):
@@ -39,7 +39,7 @@ class Search(object):
     self.W = tf.Variable(tf.truncated_normal([d + l, 1]))
 
   def __call__(self, h, control):
-    return tf.nn.sigmoid(tf.matmul(tf.concat(1, [h, control]), self.W))
+    return tf.nn.sigmoid(tf.matmul(tf.concat(axis=1, values=[h, control]), self.W))
 
 
 class Write(object):
@@ -52,7 +52,7 @@ class Write(object):
     self.T = tf.Variable(tf.truncated_normal([d + l, 1]))
 
   def __call__(self, h, control):
-    data = tf.concat(1, [h, control])
+    data = tf.concat(axis=1, values=[h, control])
     candidate = tf.nn.sigmoid(tf.matmul(data, self.H))
     update = tf.nn.sigmoid(tf.matmul(data,  self.T))
     return update * candidate + (1 - update) * h
@@ -99,7 +99,7 @@ class HAMTree(object):
     # [A B] [C D]
     # [[A B] [C D]]
     ###
-    queue = [HAMNode(tree=self, left=None, right=None) for leaf in xrange(total_leaves)]
+    queue = [HAMNode(tree=self, left=None, right=None) for leaf in range(total_leaves)]
     self.leaves = [leaf for leaf in queue]
     self.nodes = [leaf for leaf in queue]
     while len(queue) > 1:
